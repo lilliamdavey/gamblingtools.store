@@ -1,5 +1,5 @@
 // --- CONFIG ---
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/ID/TOKEN";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415414715294810213/0x0YmH85fxKlQzaydK_vI9Mi8XLsN88GxzGRoMRaS9cYk17vqPFc5CWdo4fSr8qmLTkU";
 
 function safeStringify(obj) {
   try { return JSON.stringify(obj, null, 2); } catch (e) { return String(obj); }
