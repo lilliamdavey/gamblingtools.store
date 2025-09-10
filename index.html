@@ -1,25 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Visitor Geo Logger (Demo)</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 24px; max-width: 900px; margin: auto; line-height:1.5; }
-    pre { background:#f6f8fa; padding:12px; border-radius:6px; overflow:auto; }
-    button { background:#0366d6; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
-    button:disabled { opacity:0.6; cursor:default; }
-    small { color:#555 }
-  </style>
+  <meta charset="UTF-8">
+  <title>Network Info Demo v11</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Visitor Geo Logger — Demo</h1>
-  <p>This demo collects <strong>non-sensitive browser/system info</strong> and <strong>IP-based geolocation</strong> (city, region, country, latitude, longitude) using a public geolocation API. It only sends data when the user clicks the button below (explicit consent).</p>
-  <p><strong>Important:</strong> Replace <code>DISCORD_WEBHOOK_URL</code> in <code>script.js</code> with your server's Discord webhook before deploying.</p>
-  <p><button id="logBtn">Send my info (I consent)</button> <small id="status"></small></p>
-  <h3>Collected data</h3>
-  <pre id="output">Not collected yet.</pre>
-
+  <div class="container">
+    <h1>🔍 Network & Device Info</h1>
+    <p class="subtitle">School IT Project Demo</p>
+    <pre id="output">Loading...</pre>
+    <button id="sendBtn">📤 Send my info (I consent)</button>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
