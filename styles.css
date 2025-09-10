@@ -27,6 +27,11 @@ h1 {
   font-size: 0.9rem;
   color: #666;
 }
+#status {
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
+  color: #444;
+}
 pre {
   background: #1e1e2f;
   color: #dcdcdc;
