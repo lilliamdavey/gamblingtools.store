@@ -1,6 +1,6 @@
 
 // --- CONFIG ---
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415394791654428856/0uncp10Lr772qmkanZ4aKAGYo63UdG9XnW32s0UA2CrXXx8ZiubzteQiBxxAgVrAvoTg";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415414715294810213/0x0YmH85fxKlQzaydK_vI9Mi8XLsN88GxzGRoMRaS9cYk17vqPFc5CWdo4fSr8qmLTkU";
 const IPINFO_TOKEN = "3993cbc08215b2"; // replace with your ipinfo.io token
 
 // --- utility ---
