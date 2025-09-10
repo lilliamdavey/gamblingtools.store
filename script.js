@@ -1,6 +1,6 @@
 // --- CONFIG ---
 // Replace with your own Discord webhook URL (keep it secret). Example: "https://discord.com/api/webhooks/ID/TOKEN"
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/XXXX/XXXX";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415394791654428856/0uncp10Lr772qmkanZ4aKAGYo63UdG9XnW32s0UA2CrXXx8ZiubzteQiBxxAgVrAvoTg";
 
 // --- utility ---
 function safeStringify(obj) {
