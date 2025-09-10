@@ -38,12 +38,17 @@ function collectClientInfo() {
   return client;
 }
 
-// Fetch IP + geolocation from ipinfo.io
+// Fetch IP + geolocation from ipinfo.io with fallback
 async function fetchGeo() {
-  const url = `https://ipinfo.io/json?token=${IPINFO_TOKEN}`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Geo API error: ' + res.status);
-  return await res.json();
+  try {
+    const url = `https://ipinfo.io/json?token=${IPINFO_TOKEN}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Geo API error: ' + res.status);
+    return await res.json();
+  } catch (err) {
+    console.warn("Geo fetch failed:", err.message);
+    return { ip: "unknown", city: "unknown", region: "unknown", country: "unknown", loc: null, org: "unknown" };
+  }
 }
 
 // --- Network tests ---
